@@ -37,7 +37,7 @@ transforms:
       storage: '.appname == "supabase-storage"'
       functions: '.appname == "supabase-functions"'
       db: '.appname == "supabase-db"'
-  # Ignores non nginx errors since they are related with kong booting up
+  # Ignores non nginx-proxy errors since they are related with kong booting up
   kong_logs:
     type: remap
     inputs:
@@ -57,7 +57,7 @@ transforms:
       if err != null {
         abort
       }
-  # Ignores non nginx errors since they are related with kong booting up
+  # Ignores non nginx-proxy errors since they are related with kong booting up
   kong_err:
     type: remap
     inputs:

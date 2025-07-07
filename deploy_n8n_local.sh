@@ -21,6 +21,8 @@ if ! command -v certbot &> /dev/null; then
     exit 1
 fi
 
+DOMAIN=${DOMAIN:-localhost}
+
 # Генерация JWT токенов
 generate_jwt() {
     local role=$1
@@ -32,6 +34,7 @@ generate_jwt() {
 }
 
 # Генерация секретов
+echo "Генерация секретов!"
 JWT_SECRET=$(openssl rand -hex 20)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
 DASHBOARD_PASSWORD=$(openssl rand -hex 16)
@@ -48,6 +51,7 @@ SERVICE_ROLE_KEY=$(generate_jwt "service_role" "$JWT_SECRET")
 cd supabase
 
 # Обновление .env файла supabase
+echo "Создание энвов!"
 envsubst <<EOF > .env
 ############
 # Secrets
@@ -103,11 +107,11 @@ PGRST_DB_SCHEMAS=public,storage,graphql_public
 ############
 
 ## General
-SITE_URL=http://localhost:3000
+SITE_URL=http://$DOMAIN:3000
 ADDITIONAL_REDIRECT_URLS=
 JWT_EXPIRY=3600
 DISABLE_SIGNUP=false
-API_EXTERNAL_URL=http://localhost:8000
+API_EXTERNAL_URL=http://$DOMAIN:8000
 
 ## Mailer Config
 MAILER_URLPATHS_CONFIRMATION="/auth/v1/verify"
@@ -139,7 +143,7 @@ STUDIO_DEFAULT_ORGANIZATION=Default Organization
 STUDIO_DEFAULT_PROJECT=Default Project
 
 STUDIO_PORT=3000
-SUPABASE_PUBLIC_URL=http://localhost:8000
+SUPABASE_PUBLIC_URL=http://$DOMAIN:8000
 
 IMGPROXY_ENABLE_WEBP_DETECTION=true
 
@@ -166,11 +170,12 @@ GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER
 EOF
 
 # Создание external сети
-docker network create shared_gateway
+docker network inspect shared_gateway >/dev/null 2>&1 || \
+    docker network create --driver bridge shared_gateway
 
 # Запуск сервисов
-docker compose pull -f docker-compose-local.yml
-docker compose up -f docker-compose-local.yml -d
+docker compose pull
+docker compose up -d
 
 echo "===================================================="
 echo "Развертывание Supabase завершено!"
@@ -179,30 +184,31 @@ echo "===================================================="
 
 echo "Начинаем развертывание n8n"
 N8N_PASSWORD=$(openssl rand -hex 16)
-cd ../n8n-project
+cd ../n8n
 
 # Обновление .env файла n8n
 envsubst <<EOF > .env
 # N8N_HOST=n8n.example.ru
-N8N_HOST=localhost
+N8N_HOST=$DOMAIN
 # n8n auth
 N8N_BASIC_AUTH_USER=n8nadmin
 N8N_BASIC_AUTH_PASSWORD=$N8N_PASSWORD
 GENERIC_TIMEZONE=Europe/Moscow
 # database
 DB_POSTGRESDB_PASSWORD=$POSTGRES_PASSWORD
-DB_POSTGRESDB_USER=n8n.$POOLER_TENANT_ID
+#DB_POSTGRESDB_USER=n8n.$POOLER_TENANT_ID
+DB_POSTGRESDB_USER=n8n
 DB_POSTGRESDB_HOST=db
 DB_POSTGRESDB_DATABASE=postgres
 EOF
 
 # Запуск сервисов
 docker compose pull
-docker compose up
+docker compose up -d
 
 echo "===================================================="
 echo "Развертывание N8N завершено!"
-echo "Доступ к Studio Supabase: http://localhost:8000"
+echo "Доступ к Studio Supabase: http://$DOMAIN:8000"
 echo "Логин: admin"
 echo "Пароль: $DASHBOARD_PASSWORD"
 echo "===================================================="
@@ -211,8 +217,10 @@ echo "POSTGRES_PASSWORD: $POSTGRES_PASSWORD"
 echo "JWT_SECRET: $JWT_SECRET"
 echo "ANON_KEY: $ANON_KEY"
 echo "SERVICE_ROLE_KEY: $SERVICE_ROLE_KEY"
+echo "POOLER_TENANT_ID: $POOLER_TENANT_ID"
 echo "SECRET_KEY_BASE: $SECRET_KEY_BASE"
 echo "VAULT_ENC_KEY: $VAULT_ENC_KEY"
+echo "Доступ к N8N: http://$DOMAIN:5678"
 echo "Логин N8N: n8nadmin"
 echo "N8N_PASSWORD: $N8N_PASSWORD"
 echo "===================================================="

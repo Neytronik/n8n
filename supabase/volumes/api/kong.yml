@@ -34,6 +34,14 @@ basicauth_credentials:
 ### API Routes
 ###
 services:
+#  - name: main-landing
+#    url: http://kong:8000
+#    routes:
+#      - name: main-route
+#        protocols: [ https ]
+#        hosts: [ "localhost" ]
+#        paths: [ "/" ]
+
   ## Open Auth routes
   - name: auth-v1-open
     url: http://auth:9999/verify

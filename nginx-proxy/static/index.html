@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal Tools Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        :root {
+            --primary: #1a73e8;
+            --primary-light: #4dabf5;
+            --secondary: #0077b6;
+            --accent: #00b4d8;
+            --glass: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        header {
+            margin-bottom: 60px;
+            animation: fadeIn 1s ease;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.3rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .tile {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 40px 25px;
+            text-align: center;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                0 4px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            z-index: -1;
+        }
+
+        .tile::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(26, 115, 232, 0.1), rgba(0, 180, 216, 0.05));
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .tile:hover {
+            transform: translateY(-10px) scale(1.03);
+            box-shadow:
+                0 15px 35px rgba(0, 105, 148, 0.2),
+                0 8px 16px rgba(0, 0, 0, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .tile:hover::after {
+            opacity: 1;
+        }
+
+        .tile h2 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .tile p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .tile .icon {
+            font-size: 3.5rem;
+            margin-bottom: 25px;
+            background: linear-gradient(to bottom, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .tile .icon-bg {
+            position: absolute;
+            font-size: 8rem;
+            opacity: 0.05;
+            z-index: -1;
+            top: -20px;
+            right: -20px;
+            transform: rotate(15deg);
+            background: linear-gradient(to bottom, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .footer {
+            margin-top: 70px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1rem;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .waves {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            overflow: hidden;
+            line-height: 0;
+            z-index: -1;
+        }
+
+        .waves svg {
+            position: relative;
+            display: block;
+            width: calc(100% + 1.3px);
+            height: 100px;
+        }
+
+        .waves .shape-fill {
+            fill: rgba(0, 119, 182, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.3rem;
+            }
+
+            .subtitle {
+                font-size: 1.1rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="waves">
+        <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25" class="shape-fill"></path>
+            <path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5" class="shape-fill"></path>
+            <path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z" class="shape-fill"></path>
+        </svg>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-tools"></i> Internal Tools Dashboard</h1>
+            <p class="subtitle">Единая точка доступа ко всем внутренним сервисам компании</p>
+        </header>
+
+        <div class="grid">
+            <!-- n8n Tile -->
+            <div class="tile" onclick="window.location.href='https://n8n.'">
+                <i class="icon fas fa-cogs"></i>
+                <i class="icon-bg fas fa-cogs"></i>
+                <h2>n8n</h2>
+                <p>Платформа для автоматизации рабочих процессов и интеграций</p>
+            </div>
+
+            <!-- Supabase Tile -->
+            <div class="tile" onclick="window.location.href='https://supabase.'">
+                <i class="icon fas fa-database"></i>
+                <i class="icon-bg fas fa-database"></i>
+                <h2>Supabase Studio</h2>
+                <p>Управление базой данных и бэкенд-сервисами</p>
+            </div>
+
+            <!-- Заглушка 1 -->
+            <div class="tile">
+                <i class="icon fas fa-chart-line"></i>
+                <i class="icon-bg fas fa-chart-line"></i>
+                <h2>Analytics Hub</h2>
+                <p>Аналитика данных и визуализация показателей</p>
+            </div>
+
+            <!-- Заглушка 2 -->
+            <div class="tile">
+                <i class="icon fas fa-shield-alt"></i>
+                <i class="icon-bg fas fa-shield-alt"></i>
+                <h2>Security Center</h2>
+                <p>Управление доступом и безопасностью</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            &copy; 2023 Internal Tools | Версия 1.0 | <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <script>
+        // Обновляем дату в футере
+        const now = new Date();
+        document.getElementById('currentDate').textContent = now.toLocaleDateString('ru-RU');
+
+        // Анимация элементов
+        document.addEventListener('DOMContentLoaded', () => {
+            const tiles = document.querySelectorAll('.tile');
+            tiles.forEach((tile, index) => {
+                tile.style.opacity = '0';
+                tile.style.transform = 'translateY(30px)';
+
+                setTimeout(() => {
+                    tile.style.transition = 'opacity 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    tile.style.opacity = '1';
+                    tile.style.transform = 'translateY(0)';
+
+                    // Добавляем плавающую анимацию
+                    tile.addEventListener('mouseenter', () => {
+                        tile.style.animation = 'float 3s ease-in-out infinite';
+                    });
+
+                    tile.addEventListener('mouseleave', () => {
+                        tile.style.animation = 'none';
+                    });
+                }, 150 * index);
+            });
+        });
+    </script>
+</body>
+</html>
