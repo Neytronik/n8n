@@ -21,6 +21,10 @@ if ! command -v certbot &> /dev/null; then
     exit 1
 fi
 
+# Создание external сети
+docker network inspect shared_gateway >/dev/null 2>&1 || \
+    docker network create --driver bridge shared_gateway
+
 # Запрос доменного имени
 read -p "Введите доменное имя для проекта (например: example.com): " DOMAIN_NAME
 while [[ -z "$DOMAIN_NAME" ]]; do
@@ -51,6 +55,23 @@ http {
         listen 80;
         server_name $DOMAIN_NAME *.$DOMAIN_NAME;
         return 301 https://\$host\$request_uri;
+    }
+
+    server {
+        listen 80;
+        server_name $DOMAIN_NAME *.$DOMAIN_NAME;
+
+        # Обработка ACME-челленджа – файлы должны находиться по данному пути.
+        location /.well-known/acme-challenge/ {
+            root /usr/share/nginx/html;
+            # Если certbot использует другой каталог, замените /usr/share/nginx/html на нужный каталог, например:
+            # root /var/www/certbot;
+        }
+
+        # Остальные запросы - перенаправляем на HTTPS
+        location / {
+            return 301 https://$host$request_uri;
+        }
     }
 
     server {
@@ -258,10 +279,6 @@ DOCKER_SOCKET_LOCATION=/var/run/docker.sock
 GOOGLE_PROJECT_ID=GOOGLE_PROJECT_ID
 GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER
 EOF
-
-# Создание external сети
-docker network inspect shared_gateway >/dev/null 2>&1 || \
-    docker network create --driver bridge shared_gateway
 
 # Запуск сервисов
 docker compose pull
