@@ -41,82 +41,101 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 # Генерация поддоменов
 SUPABASE_SUBDOMAIN="supabase.$DOMAIN_NAME"
-N8N_SUBDOMAIN="n8n.$MAIN_DOMAIN"
+N8N_SUBDOMAIN="n8n.$DOMAIN_NAME"
 
 cd nginx-proxy
 # Создаем конфиг Nginx
 cat > config/nginx.conf <<EOF
-events {
-    worker_connections  1024;
+server {
+    listen 80;
+    server_name $DOMAIN_NAME *.$DOMAIN_NAME;
+
+    location /.well-known/acme-challenge/ {
+        root /usr/share/nginx/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
 }
 
-http {
-    server {
-        listen 80;
-        server_name $DOMAIN_NAME *.$DOMAIN_NAME;
-        return 301 https://\$host\$request_uri;
+server {
+    listen 443 ssl;
+    server_name $DOMAIN_NAME services.$DOMAIN_NAME;
+
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+
+    # Важно: Исключаем аутентификацию для ACME-челленджей
+    location /.well-known/acme-challenge/ {
+        root /usr/share/nginx/html;
     }
 
-    server {
-        listen 80;
-        server_name $DOMAIN_NAME *.$DOMAIN_NAME;
+    location / {
+        auth_basic "Restricted Area";         # Включаем базовую аутентификацию
+        auth_basic_user_file /etc/nginx/.htpasswd;  # Путь к файлу с паролями
 
-        # Обработка ACME-челленджа – файлы должны находиться по данному пути.
-        location /.well-known/acme-challenge/ {
-            root /usr/share/nginx/html;
-            # Если certbot использует другой каталог, замените /usr/share/nginx/html на нужный каталог, например:
-            # root /var/www/certbot;
-        }
+        root /usr/share/nginx/html;
+        index index.html;
+    }
+}
 
-        # Остальные запросы - перенаправляем на HTTPS
-        location / {
-            return 301 https://$host$request_uri;
-        }
+server {
+    listen 443 ssl;
+    server_name $SUPABASE_SUBDOMAIN;
+
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+
+    location /.well-known/acme-challenge/ {
+        root /usr/share/nginx/html;
     }
 
-    server {
-        listen 443 ssl;
-        server_name $DOMAIN_NAME services.$DOMAIN_NAME;
+    location / {
+        auth_basic "Restricted Area";
+        auth_basic_user_file /etc/nginx/.htpasswd;
 
-        ssl_certificate /etc/nginx/ssl/fullchain.pem;
-        ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+        proxy_pass http://kong:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Origin https://$host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 
-        location / {
-            root /usr/share/nginx/html;
-            index index.html;
-        }
+server {
+    listen 443 ssl;
+    server_name $N8N_SUBDOMAIN;
+
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+
+    location /.well-known/acme-challenge/ {
+        root /usr/share/nginx/html;
     }
 
-    server {
-        listen 443 ssl;
-        server_name $SUPABASE_SUBDOMAIN;
+    location / {
+        auth_basic "Restricted Area";
+        auth_basic_user_file /etc/nginx/.htpasswd;
 
-        ssl_certificate /etc/nginx/ssl/fullchain.pem;
-        ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-
-        location / {
-            proxy_pass http://kong:8000;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
+        proxy_pass http://n8n:5678;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Origin https://$host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    server {
-        listen 443 ssl;
-        server_name $N8N_SUBDOMAIN;
-
-        ssl_certificate /etc/nginx/ssl/fullchain.pem;
-        ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-
-        location / {
-            proxy_pass http://n8n:5678;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
+    location /rest/push {
+        proxy_pass http://n8n:5678;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $http_host;
+        proxy_set_header Origin $scheme://$http_host;
+        proxy_cache off;
+        proxy_buffering off;
     }
 }
 EOF
@@ -124,10 +143,10 @@ EOF
 # Замена DOMAIN в index.html
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
-    sed -i '' "s/{{DOMAIN}}/$MAIN_DOMAIN/g" static/index.html
+    sed -i '' "s/{{DOMAIN}}/$DOMAIN_NAME/g" static/index.html
 else
     # Linux и другие
-    sed -i "s/{{DOMAIN}}/$MAIN_DOMAIN/g" static/index.html
+    sed -i "s/{{DOMAIN}}/$DOMAIN_NAME/g" static/index.html
 fi
 
 echo "Запуск nginx!"

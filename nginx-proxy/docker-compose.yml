@@ -2,12 +2,14 @@ version: '3.8'
 services:
   nginx:
     image: nginx:alpine
+    restart: always
     container_name: nginx-proxy
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./config/nginx.conf:/etc/nginx/nginx.conf
+      - ./config/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./config/.htpasswd:/etc/nginx/.htpasswd
       - ./static:/usr/share/nginx/html
       - ./certs:/etc/nginx/ssl
     networks:
